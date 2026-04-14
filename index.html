@@ -23,6 +23,17 @@
       <div class="hint">Click to lock cursor · Mouse steer · WASD strafe · Space thrust · Esc release cursor</div>
     </div>
     <canvas id="scene"></canvas>
+    <div id="mobileControls" aria-hidden="true">
+      <div class="control-column">
+        <div id="moveStick" class="stick-pad">
+          <div id="moveKnob" class="stick-knob"></div>
+        </div>
+      </div>
+      <div class="control-column right">
+        <div id="lookPad" class="look-pad">LOOK</div>
+        <button class="ctrl-btn thrust" data-key="Space">THRUST</button>
+      </div>
+    </div>
     <script type="module" src="./main.js"></script>
   </body>
 </html>

@@ -6,6 +6,11 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 const canvas = document.getElementById("scene");
 const scoreLabel = document.getElementById("score");
 const speedLabel = document.getElementById("speed");
+const hudHint = document.querySelector(".hint");
+const mobileControls = document.getElementById("mobileControls");
+const lookPad = document.getElementById("lookPad");
+const moveStick = document.getElementById("moveStick");
+const moveKnob = document.getElementById("moveKnob");
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x0d1118, 0.0018);
@@ -238,11 +243,23 @@ const keys = new Set();
 window.addEventListener("keydown", (e) => keys.add(e.code));
 window.addEventListener("keyup", (e) => keys.delete(e.code));
 
-canvas.addEventListener("click", () => {
-  if (document.pointerLockElement !== canvas) {
-    canvas.requestPointerLock();
-  }
-});
+const isTouchDevice = window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
+const virtualInput = { Space: false };
+const moveAxis = { x: 0, y: 0 };
+
+function inputActive(code) {
+  return keys.has(code) || virtualInput[code];
+}
+
+if (!isTouchDevice) {
+  canvas.addEventListener("click", () => {
+    if (document.pointerLockElement !== canvas) {
+      canvas.requestPointerLock();
+    }
+  });
+} else if (hudHint) {
+  hudHint.textContent = "Touch LOOK to steer · Joystick moves · THRUST boosts";
+}
 
 const mouseLook = { x: 0, y: 0 };
 document.addEventListener("mousemove", (e) => {
@@ -252,6 +269,128 @@ document.addEventListener("mousemove", (e) => {
   mouseLook.y -= e.movementX * sensitivity;
   mouseLook.x = THREE.MathUtils.clamp(mouseLook.x, -1.05, 1.05);
 });
+
+let touchLookActive = false;
+let touchLookPointerId = null;
+let lookLastX = 0;
+let lookLastY = 0;
+
+if (mobileControls) {
+  const controlButtons = mobileControls.querySelectorAll(".ctrl-btn[data-key]");
+  controlButtons.forEach((btn) => {
+    const key = btn.dataset.key;
+    if (key !== "Space") return;
+    const setPressed = (pressed) => {
+      virtualInput[key] = pressed;
+      btn.classList.toggle("active", pressed);
+    };
+    btn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      setPressed(true);
+      btn.setPointerCapture?.(e.pointerId);
+    });
+    btn.addEventListener("pointerup", () => setPressed(false));
+    btn.addEventListener("pointercancel", () => setPressed(false));
+    btn.addEventListener("pointerleave", () => setPressed(false));
+  });
+}
+
+let moveStickActive = false;
+let moveStickPointerId = null;
+function updateMoveKnob() {
+  if (!moveKnob) return;
+  moveKnob.style.left = `${50 + moveAxis.x * 28}%`;
+  moveKnob.style.top = `${50 + moveAxis.y * 28}%`;
+}
+
+if (moveStick) {
+  const updateAxisFromPointer = (e) => {
+    const rect = moveStick.getBoundingClientRect();
+    const cx = rect.left + rect.width * 0.5;
+    const cy = rect.top + rect.height * 0.5;
+    let dx = (e.clientX - cx) / (rect.width * 0.5);
+    let dy = (e.clientY - cy) / (rect.height * 0.5);
+    const mag = Math.hypot(dx, dy);
+    if (mag > 1) {
+      dx /= mag;
+      dy /= mag;
+    }
+    moveAxis.x = THREE.MathUtils.clamp(dx, -1, 1);
+    moveAxis.y = THREE.MathUtils.clamp(dy, -1, 1);
+    updateMoveKnob();
+  };
+
+  const resetAxis = () => {
+    moveAxis.x = 0;
+    moveAxis.y = 0;
+    moveStickActive = false;
+    moveStickPointerId = null;
+    moveStick.classList.remove("active");
+    updateMoveKnob();
+  };
+
+  moveStick.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    moveStickActive = true;
+    moveStickPointerId = e.pointerId;
+    moveStick.classList.add("active");
+    moveStick.setPointerCapture?.(e.pointerId);
+    updateAxisFromPointer(e);
+  });
+
+  moveStick.addEventListener("pointermove", (e) => {
+    if (!moveStickActive || e.pointerId !== moveStickPointerId) return;
+    e.preventDefault();
+    updateAxisFromPointer(e);
+  });
+
+  const endMove = (e) => {
+    if (e.pointerId !== moveStickPointerId) return;
+    resetAxis();
+  };
+
+  moveStick.addEventListener("pointerup", endMove);
+  moveStick.addEventListener("pointercancel", endMove);
+  moveStick.addEventListener("pointerleave", endMove);
+  updateMoveKnob();
+}
+
+if (lookPad) {
+  lookPad.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    touchLookActive = true;
+    touchLookPointerId = e.pointerId;
+    lookLastX = e.clientX;
+    lookLastY = e.clientY;
+    lookPad.classList.add("active");
+    lookPad.setPointerCapture?.(e.pointerId);
+  });
+
+  lookPad.addEventListener("pointermove", (e) => {
+    if (!touchLookActive || e.pointerId !== touchLookPointerId) return;
+    e.preventDefault();
+    const dx = e.clientX - lookLastX;
+    const dy = e.clientY - lookLastY;
+    lookLastX = e.clientX;
+    lookLastY = e.clientY;
+
+    const touchSensitivity = 0.003;
+    mouseLook.y -= dx * touchSensitivity;
+    mouseLook.x -= dy * touchSensitivity;
+    mouseLook.x = THREE.MathUtils.clamp(mouseLook.x, -1.05, 1.05);
+  });
+
+  const endLook = (e) => {
+    if (e.pointerId !== touchLookPointerId) return;
+    touchLookActive = false;
+    touchLookPointerId = null;
+    lookPad.classList.remove("active");
+  };
+
+  lookPad.addEventListener("pointerup", endLook);
+  lookPad.addEventListener("pointercancel", endLook);
+  lookPad.addEventListener("pointerleave", endLook);
+}
 
 const velocity = new THREE.Vector3(0, 0, 55);
 const forward = new THREE.Vector3();
@@ -351,12 +490,15 @@ function constrainToCave() {
 
 function updateShip(dt) {
   const pointerLocked = document.pointerLockElement === canvas;
-  const inputForward = (keys.has("KeyW") ? 1 : 0) - (keys.has("KeyS") ? 1 : 0);
-  const inputStrafe = (keys.has("KeyD") ? 1 : 0) - (keys.has("KeyA") ? 1 : 0);
-  const thrustInput = keys.has("Space") ? 1 : 0;
+  const hasLookControl = pointerLocked || touchLookActive || isTouchDevice;
+  const keyForward = (inputActive("KeyW") ? 1 : 0) - (inputActive("KeyS") ? 1 : 0);
+  const keyStrafe = (inputActive("KeyD") ? 1 : 0) - (inputActive("KeyA") ? 1 : 0);
+  const inputForward = THREE.MathUtils.clamp(keyForward - moveAxis.y, -1, 1);
+  const inputStrafe = THREE.MathUtils.clamp(keyStrafe + moveAxis.x, -1, 1);
+  const thrustInput = inputActive("Space") ? 1 : 0;
 
-  const targetPitch = pointerLocked ? mouseLook.x : ship.rotation.x;
-  const targetYaw = pointerLocked ? mouseLook.y : ship.rotation.y;
+  const targetPitch = hasLookControl ? mouseLook.x : ship.rotation.x;
+  const targetYaw = hasLookControl ? mouseLook.y : ship.rotation.y;
   const targetRoll = -inputStrafe * 0.66 + THREE.MathUtils.clamp(rollRate * -0.2, -0.3, 0.3);
 
   const pitchAccel = (targetPitch - ship.rotation.x) * 29.0;
@@ -458,7 +600,8 @@ function updateShip(dt) {
   camera.lookAt(cameraLookTarget);
 
   scoreLabel.textContent = `Score: ${score}`;
-  speedLabel.textContent = `Speed: ${Math.round(velocity.length())}${pointerLocked ? "" : " (click to focus)"}`;
+  const focusHint = isTouchDevice ? "" : pointerLocked ? "" : " (click to focus)";
+  speedLabel.textContent = `Speed: ${Math.round(velocity.length())}${focusHint}`;
   ensureHoopCounter();
 }
 
