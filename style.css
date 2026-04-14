@@ -39,6 +39,27 @@ body {
   min-width: 220px;
 }
 
+#invertYToggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 12;
+  border-radius: 10px;
+  border: 1px solid var(--hud-border);
+  background: var(--hud-bg);
+  color: var(--text-main);
+  backdrop-filter: blur(6px);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+#invertYToggle.active {
+  border-color: rgba(190, 231, 255, 0.95);
+  background: rgba(56, 128, 194, 0.58);
+}
+
 .title {
   font-size: 18px;
   font-weight: 800;
@@ -146,6 +167,13 @@ body {
 @media (pointer: coarse), (max-width: 900px) {
   #mobileControls {
     display: flex;
+  }
+
+  #invertYToggle {
+    top: 12px;
+    right: 12px;
+    font-size: 12px;
+    padding: 8px 10px;
   }
 
   .hint {

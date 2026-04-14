@@ -9,6 +9,7 @@ const speedLabel = document.getElementById("speed");
 const hudHint = document.querySelector(".hint");
 const mobileControls = document.getElementById("mobileControls");
 const lookPad = document.getElementById("lookPad");
+const invertYToggle = document.getElementById("invertYToggle");
 const moveStick = document.getElementById("moveStick");
 const moveKnob = document.getElementById("moveKnob");
 
@@ -262,10 +263,25 @@ if (!isTouchDevice) {
 }
 
 const mouseLook = { x: 0, y: 0 };
+let invertY = false;
+
+function refreshInvertYLabel() {
+  if (!invertYToggle) return;
+  invertYToggle.textContent = `Invert Y: ${invertY ? "On" : "Off"}`;
+  invertYToggle.classList.toggle("active", invertY);
+}
+
+invertYToggle?.addEventListener("click", () => {
+  invertY = !invertY;
+  refreshInvertYLabel();
+});
+refreshInvertYLabel();
+
 document.addEventListener("mousemove", (e) => {
   if (document.pointerLockElement !== canvas) return;
   const sensitivity = 0.00165;
-  mouseLook.x -= e.movementY * sensitivity;
+  const pitchSign = invertY ? -1 : 1;
+  mouseLook.x -= e.movementY * sensitivity * pitchSign;
   mouseLook.y -= e.movementX * sensitivity;
   mouseLook.x = THREE.MathUtils.clamp(mouseLook.x, -1.05, 1.05);
 });
@@ -375,8 +391,9 @@ if (lookPad) {
     lookLastY = e.clientY;
 
     const touchSensitivity = 0.003;
+    const pitchSign = invertY ? -1 : 1;
     mouseLook.y -= dx * touchSensitivity;
-    mouseLook.x -= dy * touchSensitivity;
+    mouseLook.x -= dy * touchSensitivity * pitchSign;
     mouseLook.x = THREE.MathUtils.clamp(mouseLook.x, -1.05, 1.05);
   });
 
