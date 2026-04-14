@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Elytra Course</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="hud">
+      <div class="title">ELYTRA COURSE</div>
+      <div id="score">Score: 0</div>
+      <div id="speed">Speed: 0</div>
+      <div class="hint">W/S pitch · A/D roll · Q/E yaw · Shift boost</div>
+    </div>
+    <canvas id="scene"></canvas>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
